@@ -161,10 +161,15 @@ public class BlackWhite extends JFrame {
         ChessBoard cb = new ChessBoard(size, size);
         // Player player1 = new HumanPlayer(cb, Piece.BLACK);
         Player player1 = new BlackWhiteAI(cb, Piece.BLACK);
+        Player player = new BlackWhiteAIO(cb, Piece.WHITE);
         player1.setState(State.THINKING);
-        Player player2 = new BlackWhiteAI(cb, Piece.WHITE);
-        player2.setState(State.DONE);
-        BlackWhite bw = new BlackWhite(player1, player2, cb);
+//        Player player2 = new BlackWhiteAI(cb, Piece.WHITE);
+//        player2.setState(State.DONE);
+
+
+//        HumanPlayer humanPlayer1 = new HumanPlayer(cb, Piece.BLACK);
+//        HumanPlayer humanPlayer2 = new HumanPlayer(cb, Piece.WHITE);
+        BlackWhite bw = new BlackWhite(player1, player, cb);
         bw.start();
     }
 

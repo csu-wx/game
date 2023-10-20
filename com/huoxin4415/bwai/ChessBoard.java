@@ -1,6 +1,9 @@
 package com.huoxin4415.bwai;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class ChessBoard {
     private int width;
@@ -22,7 +25,7 @@ public class ChessBoard {
         this.board[width / 2][height / 2 - 1] = -1;
         this.board[width / 2][height / 2] = 1;
         this.board[width / 2 - 1][height / 2] = -1;
-        this.freeSize = width * height - 4; 
+        this.freeSize = width * height - 4;
         this.minX = width / 2 - 1;
         this.maxX = width / 2;
         this.minY = height / 2 - 1;
@@ -67,7 +70,7 @@ public class ChessBoard {
             }
             if (y < minY) {
                 minY = y;
-            } else if(y > maxY) {
+            } else if (y > maxY) {
                 maxY = y;
             }
             this.freeSize--;
@@ -76,7 +79,7 @@ public class ChessBoard {
                 this.trace.addLast(new Point(x, y));
                 this.trace.removeFirst();
             }
-            
+
             return piece;
         } else {
             return 0;
@@ -87,7 +90,7 @@ public class ChessBoard {
         int result = 0;
         // left
         result += trans(x, y, piece, -1, 0, x);
-        
+
         // right
         result += trans(x, y, piece, 1, 0, width - x - 1);
 
@@ -151,7 +154,7 @@ public class ChessBoard {
                     black++;
                 } else if (board[x][y] == -1) {
                     white++;
-                } 
+                }
             }
         }
         return black.compareTo(white);
@@ -191,5 +194,173 @@ public class ChessBoard {
 
     public int getMaxY() {
         return maxY;
+    }
+
+    public List<Point> getSteps(Boolean gameTurn) {
+
+//        ArrayList<Point> points = new ArrayList<>(10);
+//        ArrayList<Point> a = new ArrayList<>();
+//        ArrayList<Point> b = new ArrayList<>();
+//        ArrayList<Point> c = new ArrayList<>();
+//        ArrayList<Point> d = new ArrayList<>();
+//
+//        //获取横竖斜条路径上的所有棋子
+//
+//        for (Point point : points) {
+//            //竖
+//            for (int i = 0; i < point.getX(); i++) {
+//                a.add(new Point(i, point.getY()));
+//            }
+//
+//            //横
+//            for (int i = 0; i < point.getY(); i++) {
+//                b.add(new Point(point.getX(), i));
+//            }
+//
+//            //斜1
+//            for (int i = 0; ; i++) {
+//                if (point.getX() + i >= width || point.getY() + i >= height) {
+//                    break;
+//                }
+//                c.add(new Point(point.getX() + i, point.getY() + i));
+//            }
+//
+//            //斜1
+//            for (int i = 0; ; i++) {
+//                int nx = point.getX() + i;
+//                int ny = point.getY() + i;
+//                if (nx >= width || ny >= height) {
+//                    break;
+//                }
+//                c.add(new Point(nx ,ny));
+//            }
+//            for (int i = 0; ; i++) {
+//                int nx = point.getX() - i;
+//                int ny = point.getY() - i;
+//                if (nx <= 0 || ny <= 0) {
+//                    break;
+//                }
+//                c.add(new Point(nx, ny));
+//            }
+//
+//            //斜2
+//            for (int i = 0; ; i++) {
+//                int nx = point.getX() + i;
+//                int ny = point.getY() - i;
+//                if (nx >= width || nx < 0 || ny >= height || ny < 0) {
+//                    break;
+//                }
+//                d.add(new Point(nx ,ny));
+//            }
+//            for (int i = 0; ; i++) {
+//                int nx = point.getX() - i;
+//                int ny = point.getY() + i;
+//                if (nx >= width || nx < 0 || ny >= height || ny < 0) {
+//                    break;
+//                }
+//                d.add(new Point(nx, ny));
+//            }
+//        }
+
+        int player = Boolean.TRUE.equals(gameTurn) ? 1 : -1;
+
+        List<Point> nextSteps = getNextSteps(this, player);
+
+        return nextSteps.stream().filter(
+                s -> {
+                    ChessBoard childCb = new ChessBoard(this);
+                    return childCb.fall(s.getX(), s.getY(), player) == 1 ? Boolean.TRUE : Boolean.FALSE;
+                }
+        ).collect(Collectors.toList());
+
+
+    }
+
+    private List<Point> getNextSteps(ChessBoard cb, int player) {
+        List<Point> steps = new ArrayList<>();
+        int[][] board = cb.getBoard();
+        for (int i = 0; i < board.length; i++) {
+            for (int j = 0; j < board[0].length; j++) {
+                if (board[i][j] != player && board[i][j] != 0) {
+                    //不是左右边界
+                    if (i != 0 && i != board[0].length -1) {
+                        //搜左右
+                        if (board[i - 1][j] != -1 && board[i - 1][j] != 1) {
+                            Point point = new Point(i - 1, j);
+                            steps.add(point);
+                        }
+                        if (board[i + 1][j] != -1 && board[i + 1][j] != 1) {
+                            Point point = new Point(i + 1, j);
+                            steps.add(point);
+                        }
+
+                    } else {
+                        if (i == 0) {
+                            if (board[i + 1][j] != -1 && board[i + 1][j] != 1) {
+                                Point point = new Point(i + 1, j);
+                                steps.add(point);
+                            }
+                        } else {
+                            if (board[i - 1][j] != -1 && board[i - 1][j] != 1) {
+                                Point point = new Point(i - 1, j);
+                                steps.add(point);
+                            }
+                        }
+
+                    }
+                    //不是上下边界
+                    if (j != 0 && j != board.length-1) {
+                        //搜上下
+                        if (board[i][j - 1] != -1 && board[i][j - 1] != 1) {
+                            Point point = new Point(i, j - 1);
+                            steps.add(point);
+                        }
+                        if (board[i][j + 1] != -1 && board[i][j + 1] != 1) {
+                            Point point = new Point(i, j + 1);
+                            steps.add(point);
+                        }
+                    } else {
+                        if (j == 0) {
+                            if (board[i][j + 1] != -1 && board[i][j + 1] != 1) {
+                                Point point = new Point(i, j + 1);
+                                steps.add(point);
+                            }
+                        } else {
+                            if (board[i][j - 1] != -1 && board[i][j - 1] != 1) {
+                                Point point = new Point(i, j - 1);
+                                steps.add(point);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return steps;
+    }
+
+
+    public boolean isWin() {
+        int cntWhite = 0;
+        int cntBlack = 0;
+
+        for (int i = 0; i < width; i++) {
+            for (int j = 0; j < height; j++) {
+                switch (board[i][j]) {
+                    case -1:
+                        cntWhite++;
+                        break;
+                    case 1:
+                        cntBlack++;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        return cntBlack > cntWhite;
+    }
+
+    public boolean isOver() {
+        return !hasChoice(Piece.WHITE) && !hasChoice(Piece.BLACK);
     }
 }

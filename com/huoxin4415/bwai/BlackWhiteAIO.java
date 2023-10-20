@@ -1,80 +1,47 @@
 package com.huoxin4415.bwai;
 
-import javax.swing.tree.TreeNode;
-import java.awt.*;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class BlackWhiteAI extends Player {
+public class BlackWhiteAIO extends Player {
 
     private TreeNode current;
 
     private ExecutorService es = Executors.newSingleThreadExecutor();
 
-    public BlackWhiteAI(ChessBoard cb, Piece piece) {
+    public BlackWhiteAIO(ChessBoard cb, Piece piece) {
         super(cb, piece);
     }
 
-//    public int[] next(int nextPiece) {
-//        long startTime = System.currentTimeMillis();
-//        LinkedList<Point> trace = cb.getTrace();
-//        this.current = new TreeNode(trace.getLast().getX(), trace.getLast().getY(), -nextPiece);
-//        // extend(this.current, 1, this.cb);
-//        extendCurrent(this.current, 1, this.cb);
-//        System.out.println(String.format("current score:%d", this.current.getScore().intValue()));
-//        TreeNode nextNode = new TreeNode(0, 0, 0);
-//        nextNode.setScore(Integer.MIN_VALUE);
-//        System.out.print("score:");
-//        for(TreeNode node : this.current.getChildren()) {
-//            System.out.print(String.format("[%d,%d]:%d  ", node.getX(), node.getY(), node.getScore()));
-//            if (node.getScore() > nextNode.getScore()) {
-//            	nextNode = node;
-//            } else if (node.getScore() == nextNode.getScore()) {
-//                if (Math.random() < 0.5) { // 评分相等，随机匹配
-//                    nextNode = node;
-//                }
-//            }
-//        }
-//        System.out.println();
-//        System.out.println("Cost Time: " + (System.currentTimeMillis() - startTime) / 1000 + "s");
-//        return new int[]{nextNode.getX(), nextNode.getY()};
-//    }
-
-
     public int[] next(int nextPiece) {
-        Boolean gameTurn = nextPiece == -1 ? Boolean.FALSE : Boolean.TRUE;
-
-        Integer nowDepth = 0;
-        long beginTime = System.currentTimeMillis();
-        long nowTime = 0L;
-        long time = 0L;
-        Boolean flag = true;
-        ReturnMessage best = null;
-
-        do {
-            best = search(new Message(nowDepth, cb, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, gameTurn));
-            nowDepth++;
-            System.out.println("newBest:" + best);
-            //TODO 判断返回是否合法
-
-                nowTime = System.currentTimeMillis();
-                time = nowTime - beginTime;
-                flag = time < 300L;
-        } while (flag);
-
-        return new int[]{best.getPoint().getX(), best.getPoint().getY()};
-
+        long startTime = System.currentTimeMillis();
+        LinkedList<Point> trace = cb.getTrace();
+        this.current = new TreeNode(trace.getLast().getX(), trace.getLast().getY(), -nextPiece);
+        // extend(this.current, 1, this.cb);
+        extendCurrent(this.current, 1, this.cb);
+        System.out.println(String.format("current score:%d", this.current.getScore().intValue()));
+        TreeNode nextNode = new TreeNode(0, 0, 0);
+        nextNode.setScore(Integer.MIN_VALUE);
+        System.out.print("score:");
+        for(TreeNode node : this.current.getChildren()) {
+            System.out.print(String.format("[%d,%d]:%d  ", node.getX(), node.getY(), node.getScore()));
+            if (node.getScore() > nextNode.getScore()) {
+            	nextNode = node;
+            } else if (node.getScore() == nextNode.getScore()) {
+                if (Math.random() < 0.5) { // 评分相等，随机匹配
+                    nextNode = node;
+                }
+            }
+        }
+        System.out.println();
+        System.out.println("Cost Time: " + (System.currentTimeMillis() - startTime) / 1000 + "s");
+        return new int[]{nextNode.getX(), nextNode.getY()};
     }
 
-    /**
-     *
-     * @param message
-     * @return
-     */
+
     public ReturnMessage search(Message message) {
         int player = Boolean.TRUE.equals(message.getGameTurn()) ? 1 : -1;
 
@@ -89,93 +56,73 @@ public class BlackWhiteAI extends Player {
         if (message.getGameTurn()) {
             //极大层
             bestScore = alpha;
-            if (message.getDepth() == 0) {
-                return new ReturnMessage(null,Double.valueOf(new Rule().evaluate(panel.getBoard(),player)));
-            }
-
             List<Point> steps = panel.getSteps(message.getGameTurn());
-            //终局
-            if (steps.size() == 0) {
-                return new ReturnMessage(null,Double.valueOf(new Rule().evaluate(panel.getBoard(),player)));
-            }
-
-            //生成新的panel
-            ChessBoard newPanel = new ChessBoard(cb);
-
-            bestScore = Double.valueOf(Integer.MIN_VALUE);
-            //遍历可选steps
+            //遍历steps
             for (Point point : steps) {
-                alpha = Math.max(bestScore,alpha);
+                //生成新的panel
+                ChessBoard newPanel = new ChessBoard(cb);
+                newPanel.fall(point.getX(), point.getY(), player);
 
-                //判断是否剪枝
-                if (alpha >= beta) {
-                    break;
-                }
                 if (newPanel.isWin()) {
                     return new ReturnMessage(point, Double.valueOf(Integer.MAX_VALUE));
                 }
-                //开始走步
-                newPanel.fall(point.getX(), point.getY(), player);
+
                 //若达到结束深度，返回评价值，否则递归调用search
-                result = search(new Message(message.getDepth() - 1, newPanel, Math.max(bestScore,alpha), beta, !message.getGameTurn()));
+                if (message.getDepth() == 0) {
+                    result = new ReturnMessage(point, Double.valueOf(PositionScorer.grade(cb.getBoard(), player, cb.getFreeSize())));
+                } else {
+                    result = search(new Message(message.getDepth() - 1, newPanel, bestScore, beta, !message.getGameTurn()));
+                    //微微对深度惩罚 TODO 调整惩罚权重
+                    result.setScore(result.getScore() * (1 - 0.01 * message.getDepth()));
+                }
+
                 //判断是否更新bestScore
                 if (bestScore < result.getScore()) {
                     bestScore = result.getScore();
                     bestStep = point;
                 }
-                //拷贝当前走步所得棋盘
-                panel = newPanel;
+
+                //判断是否剪枝
+                if (bestScore >= beta) {
+                    return new ReturnMessage(point, bestScore);
+                }
+
             }
         } else {
             //极小层
             bestScore = beta;
-            //若达到结束深度，返回评价值，否则递归调用search
-            if (message.getDepth() == 0) {
-                result = new ReturnMessage(null, Double.valueOf(PositionScorer.grade(cb.getBoard(), player, cb.getFreeSize())));
-            }
-
             List<Point> points = panel.getSteps(message.getGameTurn());
-
-            if (points.size() == 0) {
-                return search(new Message(message.getDepth(),panel,alpha,beta,!message.getGameTurn()));
-            }
-            //生成新的panel
-            ChessBoard newPanel = new ChessBoard(cb);
             //遍历steps
             for (Point point : points) {
-                beta = Math.min(bestScore,beta);
-                //判断是否剪枝
-                if (beta <= alpha) {
-                    break;
-                }
-                newPanel.fall(point.getX(), point.getY(), player);
+                //生成新的panel
+
+                ChessBoard newPanel = new ChessBoard(cb);
+                int fall = newPanel.fall(point.getX(), point.getY(), player);
+
                 if (newPanel.isOver()) {
                     return new ReturnMessage(point, Double.valueOf(Integer.MIN_VALUE));
                 }
 
-                result = search(new Message(message.getDepth() - 1, newPanel, alpha, bestScore, !message.getGameTurn()));
+                //若达到结束深度，返回评价值，否则递归调用search
+                if (message.getDepth() == 0) {
+                    result = new ReturnMessage(point, Double.valueOf(PositionScorer.grade(cb.getBoard(), player, cb.getFreeSize())));
+                } else {
+                    result = search(new Message(message.getDepth() - 1, newPanel, alpha, bestScore, !message.getGameTurn()));
+                }
 
                 //判断是否更新bestScore
                 if (bestScore > result.getScore()) {
                     bestScore = result.getScore();
                     bestStep = point;
                 }
-                panel = newPanel;
+
+                //判断是否剪枝
+                if (bestScore <= alpha) {
+                    return new ReturnMessage(bestStep, bestScore);
+                }
             }
         }
-        bout(cb.getBoard());
-        System.out.println(bestStep);
         return new ReturnMessage(bestStep, bestScore);
-    }
-
-    private void bout(int[][] board) {
-        for (int i = 0; i < board.length; i++) {
-            for (int j = 0; j < board[0].length; j++) {
-                System.out.print(board[i][j] + " ");
-            }
-            System.out.println();
-        }
-
     }
 
 
@@ -379,7 +326,7 @@ public class BlackWhiteAI extends Player {
         }
 
         public void run() {
-            BlackWhiteAI.this.extend(node, level, cb);
+            BlackWhiteAIO.this.extend(node, level, cb);
         }
     }
 

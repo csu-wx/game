@@ -16,4 +16,17 @@ public class Point {
     public int getY() {
         return this.y;
     }
+
+
+    public Boolean equals(Point p) {
+        if (p.getX() == x && p.getY() == y) {
+            return Boolean.TRUE;
+        }
+        return Boolean.FALSE;
+    }
+
+    @Override
+    public String toString() {
+        return "X:" + x + ";Y:" + y;
+    }
 }
